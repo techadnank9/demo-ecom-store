@@ -36,6 +36,14 @@ if [ ! -f "$CONFIG_SRC" ]; then
   CONFIG_SRC="/etc/clickhouse-server/config-0-0.yaml"
 fi
 
+SELF_HOST="${RENDER_DISCOVERY_SERVICE%-discovery}"
+KEEPER_INTERNAL_HOST="${KEEPER_HOST:-${DEPENDENCY_LINK_0:-signoz-telemetrykeeper-clickhousekeeper-0}}"
+sed -i "s/signoz-telemetrykeeper-clickhousekeeper-0/${KEEPER_INTERNAL_HOST}/g" "$CONFIG_SRC"
+if [ -n "${SELF_HOST}" ]; then
+  sed -i "s/signoz-telemetrystore-clickhouse-0-0/${SELF_HOST}/g" "$CONFIG_SRC"
+  echo "ClickHouse internal host: ${SELF_HOST}"
+fi
+
 ln -sf "$CONFIG_SRC" /etc/clickhouse-server/config.yaml
 echo "ClickHouse starting with config: $CONFIG_SRC (aliased as config.yaml)"
 exec /entrypoint.sh "$@"

@@ -14,6 +14,12 @@ if [ ! -f "$CONFIG_FILE" ]; then
   CONFIG_FILE="/etc/clickhouse-keeper/keeper-0.yaml"
 fi
 
+SELF_HOST="${RENDER_DISCOVERY_SERVICE%-discovery}"
+if [ -n "${SELF_HOST}" ]; then
+  sed -i "s/signoz-telemetrykeeper-clickhousekeeper-0/${SELF_HOST}/g" "$CONFIG_FILE"
+  echo "Keeper internal host: ${SELF_HOST}"
+fi
+
 echo "Starting ClickHouse Keeper with config: $CONFIG_FILE"
 exec /usr/bin/clickhouse-keeper --config-file="$CONFIG_FILE" "$@"
 EOF
