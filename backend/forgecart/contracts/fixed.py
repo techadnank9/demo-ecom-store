@@ -1,6 +1,9 @@
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
 
+EXPECTED_FIELD = "total_cents or amount_cents"
+
+
 class CheckoutPayload(BaseModel):
     customer_name: str = Field(min_length=2, max_length=80)
     email: EmailStr
@@ -21,4 +24,3 @@ def normalize(payload: dict) -> dict:
     normalized["total_cents"] = normalized["total_cents"] or normalized["amount_cents"]
     normalized.pop("amount_cents", None)
     return normalized
-

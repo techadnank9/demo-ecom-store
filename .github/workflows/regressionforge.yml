@@ -1,0 +1,51 @@
+name: RegressionForge
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: regressionforge-local-evidence-stack
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  certification:
+    name: Deployment Certification
+    if: ${{ !github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: [self-hosted]
+    timeout-minutes: 15
+    env:
+      REGRESSIONFORGE_HOME: ${{ vars.REGRESSIONFORGE_HOME }}
+      REGRESSIONFORGE_API: ${{ vars.REGRESSIONFORGE_API_URL }}
+      REGRESSIONFORGE_CI_TOKEN: ${{ secrets.REGRESSIONFORGE_CI_TOKEN }}
+    steps:
+      - name: Check out the exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Validate runner configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$REGRESSIONFORGE_HOME" || { echo "Set the REGRESSIONFORGE_HOME repository variable" >&2; exit 2; }
+          test -n "$REGRESSIONFORGE_CI_TOKEN" || { echo "Set the REGRESSIONFORGE_CI_TOKEN Actions secret" >&2; exit 2; }
+          test -f "$REGRESSIONFORGE_HOME/scripts/ci_certify.py" || { echo "RegressionForge is not available at $REGRESSIONFORGE_HOME" >&2; exit 2; }
+
+      - name: Certify the PR deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 "$REGRESSIONFORGE_HOME/scripts/ci_certify.py" \
+            --source-dir "$GITHUB_WORKSPACE" \
+            --repository "${{ github.repository }}" \
+            --pr-number "${{ github.event.pull_request.number }}" \
+            --pr-url "${{ github.event.pull_request.html_url }}" \
+            --base-sha "${{ github.event.pull_request.base.sha }}" \
+            --head-sha "${{ github.event.pull_request.head.sha }}" \
+            --default-branch "${{ github.event.repository.default_branch }}"

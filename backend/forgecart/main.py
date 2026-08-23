@@ -88,7 +88,7 @@ async def checkout(
                 error_type="CheckoutContractValidationError",
                 error=str(exc),
                 received_fields=sorted(payload.keys()),
-                expected_field="amount_cents" if settings.release == "broken" else "total_cents",
+                expected_field=getattr(contract, "EXPECTED_FIELD", "checkout amount"),
             )
             logger.exception("Checkout contract validation failed for run %s", run_id)
             return JSONResponse(

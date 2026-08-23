@@ -1,0 +1,6 @@
+{
+  "strictness": 2,
+  "commentTypes": ["logic", "syntax", "info"],
+  "triggerOnUpdates": true,
+  "statusCheck": true
+}

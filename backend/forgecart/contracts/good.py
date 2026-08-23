@@ -1,6 +1,9 @@
 from pydantic import BaseModel, EmailStr, Field
 
 
+EXPECTED_FIELD = "total_cents"
+
+
 class CheckoutPayload(BaseModel):
     customer_name: str = Field(min_length=2, max_length=80)
     email: EmailStr
@@ -11,4 +14,3 @@ class CheckoutPayload(BaseModel):
 
 def normalize(payload: dict) -> dict:
     return CheckoutPayload.model_validate(payload).model_dump()
-
