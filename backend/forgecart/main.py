@@ -35,8 +35,8 @@ app.add_middleware(
     expose_headers=["x-trace-id", "x-regressionforge-run-id", "x-deployment-version"],
 )
 orders = OrderStore(settings.db_path)
-audit = TelemetryAudit(settings.db_path)
 tracer = configure(settings.otlp_endpoint, settings.deployment_version)
+audit = TelemetryAudit(settings.db_path, settings.deployment_version)
 contract = load_contract(settings.release)
 logger = logging.getLogger("forgecart")
 
@@ -190,4 +190,3 @@ def telemetry_logs(run_id: str) -> dict:
 def reset() -> dict:
     orders.reset()
     return {"status": "reset"}
-

@@ -69,8 +69,9 @@ class OrderStore:
 
 
 class TelemetryAudit:
-    def __init__(self, db_path: str):
+    def __init__(self, db_path: str, deployment_version: str):
         self.path = Path(db_path).with_name("forgecart-telemetry.jsonl")
+        self.deployment_version = deployment_version
         self._lock = RLock()
 
     def emit(self, event: str, **attributes: Any) -> None:
@@ -82,6 +83,9 @@ class TelemetryAudit:
         }
         with self._lock, self.path.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps(record, sort_keys=True, default=str) + "\n")
+        from .telemetry import emit_audit_log
+
+        emit_audit_log(event, self.deployment_version, attributes)
 
     def query(self, run_id: str) -> list[dict]:
         if not self.path.exists():
@@ -95,4 +99,3 @@ class TelemetryAudit:
             if record.get("run_id") == run_id:
                 results.append(record)
         return results
-
