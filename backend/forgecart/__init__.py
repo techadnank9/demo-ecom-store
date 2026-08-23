@@ -1,0 +1,2 @@
+"""ForgeCart target application."""
+

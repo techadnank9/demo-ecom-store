@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: forgecart-api
+    runtime: docker
+    rootDir: backend
+    envVars:
+      - key: FORGECART_RELEASE
+        value: good
+      - key: DEPLOYMENT_VERSION
+        value: forgecart-render
+      - key: FORGECART_DB
+        value: /data/forgecart.db
+    disk:
+      name: forgecart-data
+      mountPath: /data
+      sizeGB: 1
+  - type: web
+    name: forgecart-storefront
+    runtime: docker
+    rootDir: frontend
