@@ -57,6 +57,7 @@ def health() -> dict:
         "service": "forgecart-api",
         "release": settings.release,
         "deployment_version": settings.deployment_version,
+        "render_git_commit": settings.render_git_commit,
     }
 
 

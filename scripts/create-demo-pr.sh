@@ -2,10 +2,10 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: $0 broken|fixed [--dry-run]"
+  echo "Usage: $0 good|broken|fixed [--dry-run]"
 }
 
-if [[ $# -lt 1 || ( "$1" != "broken" && "$1" != "fixed" ) ]]; then
+if [[ $# -lt 1 || ( "$1" != "good" && "$1" != "broken" && "$1" != "fixed" ) ]]; then
   usage
   exit 2
 fi
@@ -29,13 +29,12 @@ base_branch="${FORGECART_PR_BASE:-main}"
 timestamp="$(date -u +%Y%m%d%H%M%S)"
 branch="demo/regression-${scenario}-${timestamp}"
 temp_root="$(mktemp -d "${TMPDIR:-/tmp}/forgecart-demo-pr.XXXXXX")"
+temp_root="$(cd "$temp_root" && pwd -P)"
 checkout="$temp_root/checkout"
 body_file=""
 
 cleanup() {
-  if git -C "$repo_root" worktree list --porcelain | grep -Fq "worktree $checkout"; then
-    git -C "$repo_root" worktree remove --force "$checkout" >/dev/null
-  fi
+  git -C "$repo_root" worktree remove --force "$checkout" >/dev/null 2>&1 || true
   if [[ -n "$body_file" && -f "$body_file" ]]; then
     rm -f "$body_file"
   fi
@@ -66,7 +65,13 @@ else
   git -C "$repo_root" worktree add -b "$branch" "$checkout" "$remote/$base_branch" >/dev/null
 fi
 
-if [[ "$scenario" == "broken" ]]; then
+if [[ "$scenario" == "good" ]]; then
+  cp "$checkout/backend/forgecart/contracts/baseline.py" "$checkout/backend/forgecart/contracts/good.py"
+  title="demo: certify a compatible checkout change"
+  commit_message="Demo compatible checkout baseline"
+  expected_gate="PASS"
+  description="This adds a documentation-only change to the compatible checkout contract. GitHub Actions should deploy the exact PR SHA and RegressionForge should certify the browser, API, email, webhook, visual, and SigNoz evidence."
+elif [[ "$scenario" == "broken" ]]; then
   cp "$checkout/backend/forgecart/contracts/broken.py" "$checkout/backend/forgecart/contracts/good.py"
   title="demo: introduce incompatible checkout contract"
   commit_message="Demo incompatible checkout contract"
@@ -119,3 +124,4 @@ pr_url="$(gh pr create \
 
 echo "Created $scenario demo PR: $pr_url"
 echo "Expected RegressionForge gate: $expected_gate"
+echo "Watch the cloud certification with: gh pr checks '$pr_url' --watch"

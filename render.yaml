@@ -1,20 +1,163 @@
+databases:
+  - name: signoz-metastore-postgres
+    databaseName: signoz
+    user: signoz
+    plan: basic-256mb
+    postgresMajorVersion: "16"
+    region: oregon
+    ipAllowList: []
+
 services:
+  - type: pserv
+    name: signoz-telemetrykeeper-clickhousekeeper-0
+    runtime: docker
+    plan: standard
+    region: oregon
+    dockerContext: observability/signoz/configs/telemetrykeeper
+    dockerfilePath: observability/signoz/configs/telemetrykeeper/Dockerfile
+    disk:
+      name: signoz-telemetrykeeper-clickhousekeeper-0-data
+      mountPath: /var/lib/clickhouse-keeper
+      sizeGB: 5
+
+  - type: pserv
+    name: signoz-telemetrystore-clickhouse-0-0
+    runtime: docker
+    plan: standard
+    region: oregon
+    dockerContext: observability/signoz/configs/telemetrystore
+    dockerfilePath: observability/signoz/configs/telemetrystore/Dockerfile
+    envVars:
+      - key: CLICKHOUSE_SKIP_USER_SETUP
+        value: "1"
+      - key: CLICKHOUSE_CONFIG
+        value: /etc/clickhouse-server/config.yaml
+      - key: DEPENDENCY_LINK_0
+        fromService:
+          name: signoz-telemetrykeeper-clickhousekeeper-0
+          type: pserv
+          property: host
+    disk:
+      name: signoz-telemetrystore-clickhouse-0-0-data
+      mountPath: /var/lib/clickhouse
+      sizeGB: 20
+
+  - type: pserv
+    name: signoz-ingester-0
+    runtime: docker
+    plan: standard
+    region: oregon
+    dockerContext: observability/signoz/configs/ingester
+    dockerfilePath: observability/signoz/configs/ingester/Dockerfile
+    envVars:
+      - key: SIGNOZ_OTEL_COLLECTOR_TIMEOUT
+        value: 10m
+      - key: DEPENDENCY_LINK_0
+        fromService:
+          name: signoz-telemetrystore-clickhouse-0-0
+          type: pserv
+          property: host
+
+  - type: web
+    name: signoz-signoz-0
+    runtime: image
+    plan: standard
+    region: oregon
+    healthCheckPath: /api/v1/health
+    image:
+      url: signoz/signoz:v0.138.0
+    envVars:
+      - key: SIGNOZ_SQLSTORE_PROVIDER
+        value: postgres
+      - key: SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN
+        value: tcp://signoz-telemetrystore-clickhouse-0-0:9000
+      - key: SIGNOZ_TELEMETRYSTORE_PROVIDER
+        value: clickhouse
+      - key: SIGNOZ_SQLSTORE_POSTGRES_DSN
+        fromDatabase:
+          name: signoz-metastore-postgres
+          property: connectionString
+      - key: DEPENDENCY_LINK_0
+        fromService:
+          name: signoz-telemetrystore-clickhouse-0-0
+          type: pserv
+          property: host
+
+  - type: worker
+    name: signoz-schema-migrator
+    runtime: image
+    plan: standard
+    region: oregon
+    image:
+      url: signoz/signoz-otel-collector:v0.144.8
+    dockerCommand: >-
+      /bin/sh -c /signoz-otel-collector migrate bootstrap --clickhouse-dsn=$CLICKHOUSE_DSN
+      && /signoz-otel-collector migrate sync up --clickhouse-dsn=$CLICKHOUSE_DSN
+      && /signoz-otel-collector migrate async up --clickhouse-dsn=$CLICKHOUSE_DSN
+    preDeployCommand: >-
+      /signoz-otel-collector migrate ready --clickhouse-dsn=${CLICKHOUSE_DSN} --timeout 60s
+    envVars:
+      - key: CLICKHOUSE_DSN
+        value: tcp://signoz-telemetrystore-clickhouse-0-0:9000
+      - key: SIGNOZ_OTEL_COLLECTOR_TIMEOUT
+        value: 10m
+      - key: DEPENDENCY_LINK_0
+        fromService:
+          name: signoz-telemetrystore-clickhouse-0-0
+          type: pserv
+          property: host
+
+  - type: web
+    name: forgecart-mailpit
+    runtime: image
+    plan: starter
+    region: oregon
+    healthCheckPath: /livez
+    image:
+      url: axllent/mailpit:v1.31.0
+    envVars:
+      - key: MP_UI_BIND_ADDR
+        value: 0.0.0.0:10000
+      - key: MP_SMTP_BIND_ADDR
+        value: 0.0.0.0:1025
+      - key: MP_DATABASE
+        value: /data/mailpit.db
+    disk:
+      name: forgecart-mailpit-data
+      mountPath: /data
+      sizeGB: 1
+
   - type: web
     name: forgecart-api
     runtime: docker
     rootDir: backend
+    plan: starter
+    region: oregon
+    autoDeployTrigger: off
+    healthCheckPath: /health
     envVars:
       - key: FORGECART_RELEASE
         value: good
-      - key: DEPLOYMENT_VERSION
-        value: forgecart-render
       - key: FORGECART_DB
         value: /data/forgecart.db
+      - key: SMTP_HOST
+        value: forgecart-mailpit
+      - key: SMTP_PORT
+        value: "1025"
+      - key: FULFILLMENT_WEBHOOK_URL
+        sync: false
+      - key: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://signoz-ingester-0:4318
     disk:
       name: forgecart-data
       mountPath: /data
       sizeGB: 1
+
   - type: web
     name: forgecart-storefront
     runtime: docker
     rootDir: frontend
+    plan: starter
+    region: oregon
+    autoDeployTrigger: off
+    healthCheckPath: /

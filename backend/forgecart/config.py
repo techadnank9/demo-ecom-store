@@ -7,7 +7,12 @@ import os
 @dataclass(frozen=True)
 class Settings:
     release: str = os.getenv("FORGECART_RELEASE", "good")
-    deployment_version: str = os.getenv("DEPLOYMENT_VERSION", "forgecart-good")
+    render_git_commit: str = os.getenv("RENDER_GIT_COMMIT", "")
+    deployment_version: str = (
+        os.getenv("DEPLOYMENT_VERSION")
+        or os.getenv("RENDER_GIT_COMMIT")
+        or "forgecart-good"
+    )
     db_path: str = os.getenv("FORGECART_DB", "data/forgecart.db")
     smtp_host: str = os.getenv("SMTP_HOST", "127.0.0.1")
     smtp_port: int = int(os.getenv("SMTP_PORT", "1025"))
@@ -18,4 +23,3 @@ class Settings:
 
 
 settings = Settings()
-
