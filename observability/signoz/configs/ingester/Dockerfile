@@ -23,7 +23,7 @@ sed -i "s|^server_endpoint:.*|server_endpoint: ${OPAMP_ENDPOINT}|" /etc/otel/man
 
 SELF_HOST="${RENDER_DISCOVERY_SERVICE%-discovery}"
 echo "SigNoz ingester internal host: ${SELF_HOST}"
-exec /signoz-otel-collector "$@"
+exec /signoz-otel-collector --config /etc/otel/config.yaml "$@"
 EOF
 
 RUN chmod +x /foundry-entrypoint.sh
