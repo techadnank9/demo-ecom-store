@@ -25,6 +25,7 @@ The workflow uses a self-hosted runner so GitHub can drive the local Docker evid
 
 - Actions variable `REGRESSIONFORGE_HOME`: absolute path to the local RegressionForge checkout.
 - Optional Actions variable `REGRESSIONFORGE_API_URL`: defaults to `http://localhost:4400` when empty.
+- Optional Actions variable `REGRESSIONFORGE_DOCKER_CONFIG`: a directory containing a credential-free `config.json` for macOS service runners that cannot open Docker Desktop's keychain helper.
 - Actions secret `REGRESSIONFORGE_CI_TOKEN`: the same value configured in RegressionForge's ignored `.env`.
 
 For safety, certification runs only for non-draft branches inside this repository; forked PR code is never executed on the self-hosted machine.
