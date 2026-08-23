@@ -72,6 +72,8 @@ services:
     image:
       url: signoz/signoz:v0.138.0
     envVars:
+      - key: PORT
+        value: "8080"
       - key: SIGNOZ_SQLSTORE_PROVIDER
         value: postgres
       - key: SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN
@@ -82,6 +84,16 @@ services:
         fromDatabase:
           name: signoz-metastore-postgres
           property: connectionString
+      - key: SIGNOZ_TOKENIZER_JWT_SECRET
+        sync: false
+      - key: SIGNOZ_USER_ROOT_ENABLED
+        value: "true"
+      - key: SIGNOZ_USER_ROOT_EMAIL
+        sync: false
+      - key: SIGNOZ_USER_ROOT_PASSWORD
+        sync: false
+      - key: SIGNOZ_USER_ROOT_ORG_NAME
+        value: RegressionForge
       - key: DEPENDENCY_LINK_0
         fromService:
           name: signoz-telemetrystore-clickhouse-0-0
